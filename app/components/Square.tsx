@@ -1,4 +1,4 @@
-"use client";
+// "use client";
 interface SquareProps {
   value: string | null;
   onClick: () => void;

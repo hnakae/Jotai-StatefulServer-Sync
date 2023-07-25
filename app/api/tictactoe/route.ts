@@ -81,11 +81,11 @@ function resetGame(): {
   return { gameBoard, currentPlayer };
 }
 
-// Interface for the expected request body
-interface MoveRequestBody {
-  row: number;
-  col: number;
-}
+// // Interface for the expected request body
+// interface MoveRequestBody {
+//   row: number;
+//   col: number;
+// }
 
 // Next.js API route handler
 
@@ -99,6 +99,7 @@ export async function POST(request: NextRequest) {
   // Perform the move and check for the game result
   if (gameBoard[row][col] === null) {
     gameBoard[row][col] = currentPlayer;
+    console.log(`[${row + 1}, ${col + 1}]`);
     const winner = checkWinner();
     if (winner) {
       return NextResponse.json({

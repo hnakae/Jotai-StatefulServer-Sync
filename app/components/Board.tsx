@@ -9,7 +9,7 @@ const Board = () => {
     [null, null, null],
   ]);
   const [currentPlayer, setCurrentPlayer] = useState<string>("");
-  const [message, setMessage] = useState<string>("");
+  const [message, setMessage] = useState<string>("Tic Tac Toe");
 
   useEffect(() => {
     // Fetch initial board state from the API when the component mounts
