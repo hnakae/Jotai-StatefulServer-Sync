@@ -1,15 +1,25 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useAtom } from "jotai";
 import Square from "./Square";
+import {
+  gameBoardAtom,
+  moveHistoryAtom,
+  moveIndexAtom,
+  currentPlayerAtom,
+  messageAtom,
+  winnerAtom,
+  winConAtom,
+} from "../state/atoms"; // Import the atoms from the atoms.ts file
 
 const Board = () => {
-  const [board, setBoard] = useState<(string | null)[][]>([
-    [null, null, null],
-    [null, null, null],
-    [null, null, null],
-  ]);
-  const [currentPlayer, setCurrentPlayer] = useState<string>("");
-  const [message, setMessage] = useState<string>("Tic Tac Toe");
+  const [board, setBoard] = useAtom(gameBoardAtom);
+  const [currentPlayer, setCurrentPlayer] = useAtom(currentPlayerAtom);
+  const [message, setMessage] = useAtom(messageAtom);
+  const [moveHistory, setMoveHistory] = useAtom(moveHistoryAtom);
+  const [moveIndex, setMoveIndex] = useAtom(moveIndexAtom);
+  const [winner, setWinner] = useAtom(winnerAtom);
+  const [winCon, setWinCon] = useAtom(winConAtom);
 
   useEffect(() => {
     // Fetch initial board state from the API when the component mounts
@@ -18,15 +28,28 @@ const Board = () => {
       .then((data) => {
         setBoard(data.gameBoard);
         setCurrentPlayer(data.currentPlayer);
+        setMessage(data.message);
+        setMoveHistory(data.moveHistory);
+        setMoveIndex(data.moveIndex);
+        setWinner(data.winner);
+        setWinCon(data.winCon);
       })
       .catch((error) => {
         console.error("Error fetching initial board state:", error);
       });
-  }, []);
+  }, [
+    setBoard,
+    setCurrentPlayer,
+    setMessage,
+    setMoveHistory,
+    setMoveIndex,
+    setWinner,
+    setWinCon,
+  ]);
 
   const handleSquareClick = (row: number, col: number) => {
     // Make a move when a square is clicked
-    if (currentPlayer && board[row][col] === null) {
+    if (currentPlayer && board[row][col].value === null) {
       fetch("/api/tictactoe", {
         method: "POST",
         headers: {
@@ -36,12 +59,18 @@ const Board = () => {
       })
         .then((response) => response.json())
         .then((data) => {
+          // const clickedSquareId = board[row][col].id;
           setBoard(data.gameBoard);
-          if (data.message) {
-            // Display message (e.g., winner or draw)
-            setMessage(data.message);
-          } else {
-            setCurrentPlayer(data.currentPlayer);
+
+          // Display message (e.g., winner or draw)
+          setMessage(data.message);
+
+          setCurrentPlayer(data.currentPlayer);
+          setMoveHistory(data.moveHistory);
+          setMoveIndex(data.moveIndex);
+          if (data.winner) {
+            setWinner(data.winner);
+            setWinCon(data.winCon);
           }
         })
         .catch((error) => {
@@ -50,6 +79,52 @@ const Board = () => {
         });
     }
   };
+
+  const handleUndo = () => {
+    if (moveIndex > 0) {
+      fetch("/api/tictactoe", {
+        method: "PUT",
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          setBoard(data.gameBoard);
+
+          setMessage(data.message);
+
+          setCurrentPlayer(data.currentPlayer);
+          setMoveHistory(data.moveHistory);
+          setMoveIndex(data.moveIndex);
+          if (data.winner) {
+            setWinner(data.winner);
+            setWinCon(data.winCon);
+          }
+        })
+        .catch((error) => {
+          console.error("Error undoing move:", error);
+          // Handle error state or display an error message to the user
+        });
+    }
+  };
+
+  // const handleRedo = () => {
+  //   // console.log("redo");
+  //   if (moveIndex < moveHistory.length - 1) {
+  //     fetch("/api/tictactoe", {
+  //       method: "PATCH",
+  //     })
+  //       .then((response) => response.json())
+  //       .then((data) => {
+  //         setBoard(data.gameBoard);
+  //         setMoveIndex(data.moveIndex);
+  //         setCurrentPlayer((prevPlayer) => (prevPlayer === "X" ? "O" : "X"));
+  //         setMessage("");
+  //       })
+  //       .catch((error) => {
+  //         console.error("Error redoing move:", error);
+  //         // Handle error state or display an error message to the user
+  //       });
+  //   }
+  // };
   // Function to reset the game state on the server
   const resetGame = () => {
     fetch("/api/tictactoe", {
@@ -59,7 +134,11 @@ const Board = () => {
       .then((data) => {
         setBoard(data.gameBoard);
         setCurrentPlayer(data.currentPlayer);
-        setMessage("reset"); // Reset the message when the game is reset
+        setMessage(data.message); // Reset the message when the game is reset
+        setMoveIndex(data.moveIndex);
+        setMoveHistory(data.moveHistory);
+        setWinner(data.winner);
+        setWinCon(data.winCon);
       })
       .catch((error) => {
         console.error("Error resetting the game:", error);
@@ -69,23 +148,43 @@ const Board = () => {
 
   // Render the game board UI using the board state
   return (
-    <div className="board-container  p-5 min-w-300 min-h-300 grid gap-4 ">
-      {board.map((row, rowIndex) => (
-        <div key={rowIndex} className="board-row grid grid-cols-3 gap-4">
-          {row.map((squareValue, colIndex) => (
-            <Square
-              key={`${rowIndex}-${colIndex}`}
-              value={squareValue}
-              onClick={() => handleSquareClick(rowIndex, colIndex)}
-            />
+    <>
+      <div className="flex flex-col space-y-4 outline p-4 items-center">
+        <div className="board-container  outline justify-center items-center w-[300px] h-[300px] space-y-4 flex flex-col ">
+          {board.map((row, rowIndex) => (
+            <div key={rowIndex} className="flex justify-center space-x-4">
+              {row.map(({ id, value }, colIndex) => (
+                <Square
+                  key={id}
+                  value={value}
+                  onClick={() => handleSquareClick(rowIndex, colIndex)}
+                  isWinning={winCon?.includes(id) || false}
+                />
+              ))}
+            </div>
           ))}
         </div>
-      ))}
-      {message && <div className="message">{message}</div>}
-      <button className="mt-4 outline p-3" onClick={resetGame}>
-        Reset Game
-      </button>
-    </div>
+        <div className="p-4 w-[500px] space-y-4">
+          <div className="justify-center flex outline p-4">
+            {message && <div className="message">{message}</div>}
+          </div>
+          <div className="flex justify-center p-4 space-x-4 outline">
+            <button className="outline p-3" onClick={resetGame}>
+              Reset Game
+            </button>
+            <button className="outline p-3" onClick={handleUndo}>
+              Undo
+            </button>
+          </div>
+        </div>
+      </div>
+      <div className="w-[200px] h-[200px] outline ml-1 flex justify-center items-center">
+        {currentPlayer && (
+          <div className="message">{currentPlayer}&apos;s turn</div>
+        )}
+        {winner && <div>winner: {winner}</div>}
+      </div>
+    </>
   );
 };
 
