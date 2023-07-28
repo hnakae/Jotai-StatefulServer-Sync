@@ -10,16 +10,18 @@ import {
   messageAtom,
   winnerAtom,
   winConAtom,
-} from "../state/atoms"; // Import the atoms from the atoms.ts file
+} from "../jotai/atoms"; // Import the atoms from the atoms.ts file
 
 const Board = () => {
   const [board, setBoard] = useAtom(gameBoardAtom);
   const [currentPlayer, setCurrentPlayer] = useAtom(currentPlayerAtom);
   const [message, setMessage] = useAtom(messageAtom);
-  const [moveHistory, setMoveHistory] = useAtom(moveHistoryAtom);
-  const [moveIndex, setMoveIndex] = useAtom(moveIndexAtom);
   const [winner, setWinner] = useAtom(winnerAtom);
   const [winCon, setWinCon] = useAtom(winConAtom);
+
+  const [moveHistory, setMoveHistory] = useAtom(moveHistoryAtom);
+  const [moveIndex, setMoveIndex] = useAtom(moveIndexAtom);
+  // const current = moveHistory[moveIndex];
 
   useEffect(() => {
     // Fetch initial board state from the API when the component mounts
@@ -59,15 +61,13 @@ const Board = () => {
       })
         .then((response) => response.json())
         .then((data) => {
-          // const clickedSquareId = board[row][col].id;
           setBoard(data.gameBoard);
-
-          // Display message (e.g., winner or draw)
           setMessage(data.message);
-
           setCurrentPlayer(data.currentPlayer);
+
           setMoveHistory(data.moveHistory);
           setMoveIndex(data.moveIndex);
+
           if (data.winner) {
             setWinner(data.winner);
             setWinCon(data.winCon);
@@ -85,18 +85,26 @@ const Board = () => {
       fetch("/api/tictactoe", {
         method: "PUT",
       })
-        .then((response) => response.json())
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Undo failed");
+          }
+          return response.json();
+        })
         .then((data) => {
           setBoard(data.gameBoard);
-
           setMessage(data.message);
-
           setCurrentPlayer(data.currentPlayer);
+
           setMoveHistory(data.moveHistory);
           setMoveIndex(data.moveIndex);
+
           if (data.winner) {
             setWinner(data.winner);
             setWinCon(data.winCon);
+          } else {
+            setWinner(null);
+            setWinCon(null);
           }
         })
         .catch((error) => {
@@ -165,8 +173,15 @@ const Board = () => {
           ))}
         </div>
         <div className="p-4 w-[500px] space-y-4">
-          <div className="justify-center flex outline p-4">
+          <div className="justify-center flex outline p-4 h-[250px]">
             {message && <div className="message">{message}</div>}
+            <ol>
+              {moveHistory.map((move, idx) => (
+                <li key={idx}>
+                  {move.row}, {move.col}
+                </li>
+              ))}
+            </ol>
           </div>
           <div className="flex justify-center p-4 space-x-4 outline">
             <button className="outline p-3" onClick={resetGame}>
@@ -178,8 +193,8 @@ const Board = () => {
           </div>
         </div>
       </div>
-      <div className="w-[200px] h-[200px] outline ml-1 flex justify-center items-center">
-        {currentPlayer && (
+      <div className="w-[200px] min-h-full outline ml-1 flex justify-center items-center">
+        {currentPlayer && winner != null && (
           <div className="message">{currentPlayer}&apos;s turn</div>
         )}
         {winner && <div>winner: {winner}</div>}

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@prisma/client": "^5.0.0",
+    "@tanstack/react-query": "^4.32.0",
     "@types/node": "20.4.4",
     "@types/react": "18.2.15",
     "@types/react-dom": "18.2.7",
@@ -25,6 +26,7 @@
     "typescript": "5.1.6"
   },
   "devDependencies": {
+    "@tanstack/eslint-plugin-query": "^4.29.25",
     "prisma": "^5.0.0"
   }
 }

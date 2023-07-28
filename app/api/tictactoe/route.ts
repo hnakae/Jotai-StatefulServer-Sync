@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
   if (gameBoard[row][col].value === null) {
     gameBoard[row][col].value = currentPlayer;
     currentPlayer = currentPlayer === "X" ? "O" : "X";
-    message += `[${row + 1}, ${col + 1}], `;
+    message = "";
     moveHistory = [...moveHistory.slice(0, moveIndex + 1), { row, col }];
     moveIndex++;
     winner = checkWinner();
@@ -228,21 +228,65 @@ export async function DELETE(request: NextRequest) {
   });
 }
 
+// export async function PUT(request: NextRequest) {
+//   if (moveIndex > 0) {
+//     const currMove = moveHistory[moveIndex]; // Get the current move to undo
+
+//     // Check if currMove is not undefined before proceeding
+
+//     gameBoard[currMove.row][currMove.col].value = null; // Undo the current move
+//     currentPlayer = currentPlayer === "X" ? "O" : "X";
+//     moveIndex--;
+//     // moveHistory.pop();
+//     moveHistory = moveHistory.slice(0, moveIndex); // Update the moveHistory array
+//     winner = null;
+//     winCon = null;
+//     return NextResponse.json({
+//       message: "undo",
+//       gameBoard,
+//       currentPlayer,
+//       moveHistory,
+//       moveIndex,
+//       winner,
+//       winCon,
+//     });
+//   } else {
+//     return NextResponse.json(
+//       { message: "Cannot undo further", gameBoard, moveHistory, moveIndex },
+//       { status: 400 }
+//     );
+//   }
+// }
+// Assuming you have access to gameBoard, currentPlayer, moveHistory, winner, and winCon on the server-side.
+
+// pages/api/ticTacToe.ts
+
+// ... (rest of the code remains the same)
+
 export async function PUT(request: NextRequest) {
   if (moveIndex > 0) {
-    const currMove = moveHistory[moveIndex]; // Get the current move to undo
+    const currMove = moveHistory[moveIndex - 1]; // Get the last move to undo
 
-    // Check if currMove is not undefined before proceeding
+    if (!currMove) {
+      return NextResponse.json(
+        {
+          message: "Move not found. Undo failed.",
+          gameBoard,
+          moveHistory,
+          moveIndex,
+        },
+        { status: 400 }
+      );
+    }
 
-    gameBoard[currMove.row][currMove.col].value = null; // Undo the current move
+    gameBoard[currMove.row][currMove.col].value = null; // Undo the last move
     currentPlayer = currentPlayer === "X" ? "O" : "X";
     moveIndex--;
-    // moveHistory.pop();
     moveHistory = moveHistory.slice(0, moveIndex); // Update the moveHistory array
     winner = null;
     winCon = null;
     return NextResponse.json({
-      message: "undo",
+      message,
       gameBoard,
       currentPlayer,
       moveHistory,
@@ -258,13 +302,7 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// export async function changePlayer(request: NextRequest) {
-//   currentPlayer = currentPlayer === "X" ? "O" : "X";
-//   return NextResponse.json({
-//     message: "Player changed",
-//     currentPlayer,
-//   });
-// }
+// ... (rest of the code remains the same)
 
 // export async function PATCH(request: NextRequest) {
 //   // Implement the redo functionality
