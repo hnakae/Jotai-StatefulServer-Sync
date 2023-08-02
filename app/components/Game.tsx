@@ -1,5 +1,6 @@
 // "use client";
 import Board from "./Board";
+import FileUpload from "./FileUpload";
 import Sibling from "./Sibling";
 
 const Game = () => {
@@ -10,6 +11,9 @@ const Game = () => {
       </div>
       <div className="outline mt-4">
         <Sibling />
+      </div>
+      <div>
+        <FileUpload />
       </div>
     </div>
   );

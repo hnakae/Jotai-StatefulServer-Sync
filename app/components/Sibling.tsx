@@ -27,6 +27,7 @@ const gameStatusAtom = atom((get) => {
 const Sibling = () => {
   const [message, setMessage] = useAtom(messageAtom);
   const [gameStatus] = useAtom(gameStatusAtom);
+  const [moveIndex] = useAtom(moveIndexAtom);
 
   return (
     <div className="p-4">
@@ -34,6 +35,8 @@ const Sibling = () => {
       {message}
       <br />
       Game Status: {gameStatus}
+      <br />
+      Move Index: {moveIndex}
     </div>
   );
 };

@@ -30,16 +30,8 @@ export let message: string = "";
 export let winner: string | null = "";
 export let winCon: number[] | null = null;
 
-// const winningCombos: number[][] = [
-//   [1, 2, 3], // top row
-//   [4, 5, 6], // middle row
-//   [7, 8, 9], // bottom row
-//   [1, 4, 7], // left column
-//   [2, 5, 8], // middle column
-//   [3, 6, 9], // right column
-//   [1, 5, 9], // descending diagonal
-//   [3, 5, 7], // ascending diagonal
-// ];
+export let redoHistory: { row: number; col: number }[] = [];
+
 // Function to check for a winner and set the winCon variable
 function checkWinner(): string | null {
   // Check rows for a winner
@@ -138,20 +130,6 @@ function resetGame(): {
   return { gameBoard, currentPlayer };
 }
 
-// // Interface for the expected request body
-// interface MoveRequestBody {
-//   row: number;
-//   col: number;
-// }
-
-// Next.js API route handler
-
-// Function to update move history and index
-// function updateMoveHistory(row: number, col: number) {
-//   moveHistory = [...moveHistory.slice(0, moveIndex + 1), { row, col }];
-//   moveIndex++;
-// }
-
 export async function GET(request: NextRequest) {
   return NextResponse.json({
     gameBoard,
@@ -161,8 +139,10 @@ export async function GET(request: NextRequest) {
     moveIndex,
     winner,
     winCon,
+    redoHistory,
   });
 }
+
 export async function POST(request: NextRequest) {
   const { row, col } = await request.json();
 
@@ -173,6 +153,7 @@ export async function POST(request: NextRequest) {
     message = "";
     moveHistory = [...moveHistory.slice(0, moveIndex + 1), { row, col }];
     moveIndex++;
+    redoHistory = [];
     winner = checkWinner();
     // winCon = checkWinCon();
     if (winner) {
@@ -184,6 +165,7 @@ export async function POST(request: NextRequest) {
         winCon,
         moveHistory,
         moveIndex,
+        redoHistory,
       });
     } else if (checkDraw()) {
       return NextResponse.json({
@@ -191,6 +173,7 @@ export async function POST(request: NextRequest) {
         gameBoard,
         moveHistory,
         moveIndex,
+        redoHistory,
       });
     } else {
       console.log(`player: ${currentPlayer}`);
@@ -200,11 +183,18 @@ export async function POST(request: NextRequest) {
         currentPlayer,
         moveHistory,
         moveIndex,
+        redoHistory,
       });
     }
   } else {
     return NextResponse.json(
-      { message: "Invalid move", gameBoard, moveHistory, moveIndex },
+      {
+        message: "Invalid move",
+        gameBoard,
+        moveHistory,
+        moveIndex,
+        redoHistory,
+      },
       { status: 400 }
     );
   }
@@ -214,6 +204,7 @@ export async function DELETE(request: NextRequest) {
   const { gameBoard, currentPlayer } = resetGame();
   moveHistory = [];
   moveIndex = 0;
+  redoHistory = [];
   winner = "";
   winCon = null;
   message = "";
@@ -225,44 +216,11 @@ export async function DELETE(request: NextRequest) {
     moveHistory,
     winner,
     winCon,
+    redoHistory,
   });
 }
 
-// export async function PUT(request: NextRequest) {
-//   if (moveIndex > 0) {
-//     const currMove = moveHistory[moveIndex]; // Get the current move to undo
-
-//     // Check if currMove is not undefined before proceeding
-
-//     gameBoard[currMove.row][currMove.col].value = null; // Undo the current move
-//     currentPlayer = currentPlayer === "X" ? "O" : "X";
-//     moveIndex--;
-//     // moveHistory.pop();
-//     moveHistory = moveHistory.slice(0, moveIndex); // Update the moveHistory array
-//     winner = null;
-//     winCon = null;
-//     return NextResponse.json({
-//       message: "undo",
-//       gameBoard,
-//       currentPlayer,
-//       moveHistory,
-//       moveIndex,
-//       winner,
-//       winCon,
-//     });
-//   } else {
-//     return NextResponse.json(
-//       { message: "Cannot undo further", gameBoard, moveHistory, moveIndex },
-//       { status: 400 }
-//     );
-//   }
-// }
-// Assuming you have access to gameBoard, currentPlayer, moveHistory, winner, and winCon on the server-side.
-
-// pages/api/ticTacToe.ts
-
-// ... (rest of the code remains the same)
-
+//UNDO
 export async function PUT(request: NextRequest) {
   if (moveIndex > 0) {
     const currMove = moveHistory[moveIndex - 1]; // Get the last move to undo
@@ -283,6 +241,7 @@ export async function PUT(request: NextRequest) {
     currentPlayer = currentPlayer === "X" ? "O" : "X";
     moveIndex--;
     moveHistory = moveHistory.slice(0, moveIndex); // Update the moveHistory array
+    redoHistory.push(currMove);
     winner = null;
     winCon = null;
     return NextResponse.json({
@@ -293,14 +252,107 @@ export async function PUT(request: NextRequest) {
       moveIndex,
       winner,
       winCon,
+      redoHistory,
     });
   } else {
     return NextResponse.json(
-      { message: "Cannot undo further", gameBoard, moveHistory, moveIndex },
+      {
+        message: "Cannot undo further",
+        gameBoard,
+        moveHistory,
+        moveIndex,
+        redoHistory,
+      },
       { status: 400 }
     );
   }
 }
+
+//REDO
+
+export async function PATCH(request: NextRequest) {
+  if (moveIndex < moveHistory.length - 1) {
+    const nextMove = redoHistory.pop();
+
+    if (!nextMove) {
+      return NextResponse.json(
+        {
+          message: "Move not found. Redo failed.",
+          gameBoard,
+          moveHistory,
+          moveIndex,
+          redoHistory,
+        },
+        { status: 400 }
+      );
+    }
+
+    gameBoard[nextMove.row][nextMove.col].value = currentPlayer; // Redo the next move by updating the gameBoard with the current player's symbol
+    currentPlayer = currentPlayer === "X" ? "O" : "X"; // Switch the currentPlayer to the other player
+    moveIndex++; // Increment the moveIndex to point to the next move
+    moveHistory.push(nextMove); // Push the redone move back into moveHistory
+    winner = checkWinner(); // Check if the redo resulted in a win or not
+    winCon = winner ? winCon : null; // Update the winCon if there's a winner, otherwise set it to null
+    return NextResponse.json({
+      message,
+      gameBoard,
+      currentPlayer,
+      moveHistory,
+      moveIndex,
+      winner,
+      winCon,
+      redoHistory,
+    });
+  } else {
+    return NextResponse.json(
+      {
+        message: "Cannot redo further",
+        gameBoard,
+        moveHistory,
+        moveIndex,
+        redoHistory,
+      },
+      { status: 400 }
+    );
+  }
+}
+
+// export async function PATCH(request: NextRequest) {
+//   // Implement the redo functionality
+//   if (moveIndex !== moveHistory.length - 1) {
+//     const nextMove = moveHistory[moveIndex + 1];
+//     if (!nextMove) {
+//       return NextResponse.json(
+//         {
+//           message: "Move not found. Redo failed.",
+//           gameBoard,
+//           moveHistory,
+//           moveIndex,
+//         },
+//         { status: 400 }
+//       );
+//     }
+//     gameBoard[nextMove.row][nextMove.col].value = currentPlayer; // Redo the next move
+//     currentPlayer = currentPlayer === "X" ? "O" : "X";
+//     moveIndex++;
+//     winner = checkWinner();
+//     winCon = winner ? winCon : null;
+//     return NextResponse.json({
+//       message,
+//       gameBoard,
+//       currentPlayer,
+//       moveHistory,
+//       moveIndex,
+//       winner,
+//       winCon,
+//     });
+//   } else {
+//     return NextResponse.json(
+//       { message: "Cannot redo further", gameBoard, moveHistory, moveIndex },
+//       { status: 400 }
+//     );
+//   }
+// }
 
 // ... (rest of the code remains the same)
 

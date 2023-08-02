@@ -10,6 +10,7 @@ import {
   messageAtom,
   winnerAtom,
   winConAtom,
+  redoHistoryAtom,
 } from "../jotai/atoms"; // Import the atoms from the atoms.ts file
 
 const Board = () => {
@@ -21,6 +22,8 @@ const Board = () => {
 
   const [moveHistory, setMoveHistory] = useAtom(moveHistoryAtom);
   const [moveIndex, setMoveIndex] = useAtom(moveIndexAtom);
+
+  const [redoHistory, setRedoHistory] = useAtom(redoHistoryAtom);
   // const current = moveHistory[moveIndex];
 
   useEffect(() => {
@@ -47,6 +50,7 @@ const Board = () => {
     setMoveIndex,
     setWinner,
     setWinCon,
+    setRedoHistory,
   ]);
 
   const handleSquareClick = (row: number, col: number) => {
@@ -99,6 +103,36 @@ const Board = () => {
           setMoveHistory(data.moveHistory);
           setMoveIndex(data.moveIndex);
 
+          setRedoHistory(data.redoHistory);
+        })
+        .catch((error) => {
+          console.error("Error undoing move:", error);
+          // Handle error state or display an error message to the user
+        });
+    }
+  };
+
+  const handleRedo = () => {
+    if (moveIndex < moveHistory.length) {
+      fetch("/api/tictactoe", {
+        method: "PATCH",
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Redo failed");
+          }
+          // console.log("patch");
+          return response.json();
+        })
+        .then((data) => {
+          // console.log("redo");
+          setBoard(data.gameBoard);
+          setMessage(data.message);
+          setCurrentPlayer(data.currentPlayer);
+
+          setMoveHistory(data.moveHistory);
+          setMoveIndex(data.moveIndex);
+          setRedoHistory(data.redoHistory);
           if (data.winner) {
             setWinner(data.winner);
             setWinCon(data.winCon);
@@ -108,31 +142,12 @@ const Board = () => {
           }
         })
         .catch((error) => {
-          console.error("Error undoing move:", error);
+          console.error("Error redoing move:", error);
           // Handle error state or display an error message to the user
         });
     }
   };
 
-  // const handleRedo = () => {
-  //   // console.log("redo");
-  //   if (moveIndex < moveHistory.length - 1) {
-  //     fetch("/api/tictactoe", {
-  //       method: "PATCH",
-  //     })
-  //       .then((response) => response.json())
-  //       .then((data) => {
-  //         setBoard(data.gameBoard);
-  //         setMoveIndex(data.moveIndex);
-  //         setCurrentPlayer((prevPlayer) => (prevPlayer === "X" ? "O" : "X"));
-  //         setMessage("");
-  //       })
-  //       .catch((error) => {
-  //         console.error("Error redoing move:", error);
-  //         // Handle error state or display an error message to the user
-  //       });
-  //   }
-  // };
   // Function to reset the game state on the server
   const resetGame = () => {
     fetch("/api/tictactoe", {
@@ -147,6 +162,7 @@ const Board = () => {
         setMoveHistory(data.moveHistory);
         setWinner(data.winner);
         setWinCon(data.winCon);
+        setRedoHistory(data.redoHistory);
       })
       .catch((error) => {
         console.error("Error resetting the game:", error);
@@ -173,12 +189,25 @@ const Board = () => {
           ))}
         </div>
         <div className="p-4 w-[500px] space-y-4">
-          <div className="justify-center flex outline p-4 h-[250px]">
+          <div className="justify-center flex flex-col outline p-4 h-[250px]">
             {message && <div className="message">{message}</div>}
+            <br />
+
+            <div>move history</div>
             <ol>
               {moveHistory.map((move, idx) => (
                 <li key={idx}>
-                  {move.row}, {move.col}
+                  #{idx} : [{move.row}, {move.col}]
+                </li>
+              ))}
+            </ol>
+            <br />
+
+            <div>redo history</div>
+            <ol>
+              {redoHistory.map((move, idx) => (
+                <li key={idx}>
+                  [{move.row}, {move.col}]
                 </li>
               ))}
             </ol>
@@ -189,6 +218,9 @@ const Board = () => {
             </button>
             <button className="outline p-3" onClick={handleUndo}>
               Undo
+            </button>
+            <button className="outline p-3" onClick={handleRedo}>
+              Redo
             </button>
           </div>
         </div>

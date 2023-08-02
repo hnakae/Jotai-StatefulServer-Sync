@@ -33,3 +33,5 @@ export const messageAtom = atom<string>("loading...");
 
 export const winnerAtom = atom<number[] | null>(null); // Updated type to store the winning square IDs
 export const winConAtom = atom<number[] | null>(null);
+
+export const redoHistoryAtom = atom<{ row: number; col: number }[]>([]);
